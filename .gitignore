@@ -1,0 +1,31 @@
+# =============================================
+#  KodeWeb Lite - .gitignore
+# =============================================
+
+# Security: encryption keys and environment variables
+.key
+.env
+
+# Runtime data (sessions, auth credentials, user settings)
+data/
+
+# Encrypted connection profiles (FTP, DB)
+connections/*.enc
+
+# Composer dependencies (install via "composer install")
+vendor/
+
+# Logs and temporary files
+*.log
+tmp/
+
+# OS and IDE configuration files
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+Thumbs.db

@@ -1,0 +1,17 @@
+{
+  "name": "KodeWeb Lite",
+  "short_name": "KodeWeb Lite",
+  "description": "IDE Web Lite e responsiva para desenvolvimento no celular",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0114",
+  "theme_color": "#140523",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
