@@ -1,7 +1,7 @@
 {
   "name": "KodeWeb Lite",
   "short_name": "KodeWeb Lite",
-  "description": "IDE Web Lite e responsiva para desenvolvimento no celular",
+  "description": "Uma IDE completa direto no navegador do seu celular",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0b0114",
