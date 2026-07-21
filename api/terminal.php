@@ -12,7 +12,8 @@ try {
             if (!isset($_SESSION['terminal_cwd']) || !is_array($_SESSION['terminal_cwd'])) {
                 $_SESSION['terminal_cwd'] = [];
             }
-            if (!isset($_SESSION['terminal_cwd'][$terminal_id])) {
+            $reset_cwd = isset($_POST['reset']) && $_POST['reset'] === 'true';
+            if (!isset($_SESSION['terminal_cwd'][$terminal_id]) || $reset_cwd) {
                 $_SESSION['terminal_cwd'][$terminal_id] = WORKSPACE_ROOT;
             }
             

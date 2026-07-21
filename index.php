@@ -69,7 +69,9 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
         </div>
         
         <div class="right-header-section">
+            <button class="header-action-btn" onclick="openNewBlankFile()" title="Novo Arquivo em Branco (Ctrl+N)">📄</button>
             <button class="header-action-btn" onclick="saveActiveFile()" title="Salvar Arquivo (Ctrl+S)">💾</button>
+            <button class="header-action-btn" onclick="openSaveAsModal()" title="Salvar Como... (Ctrl+Shift+S)">📤</button>
             <button class="header-action-btn" onclick="openWorkspaceModal()" title="Configurar Workspace">⚙️</button>
             <a href="logout.php" class="header-action-btn" title="Sair" style="text-decoration: none;">🚪</a>
         </div>
@@ -157,6 +159,25 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
                     <input type="text" class="terminal-input" id="terminal-cmd-input" placeholder="Digite o comando..." autocomplete="off">
                     
                     <div class="autocomplete-dropdown" id="terminal-autocomplete">
+                        <!-- Autocomplete matches will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SSH Terminal View -->
+        <section id="view-ssh-terminal" class="workspace-view">
+            <div class="terminal-view-container" style="background-color: #030006;">
+                <div style="padding: 5px 10px; background-color: #111; color: #aaa; font-size: 11px; border-bottom: 1px solid #333; display: flex; justify-content: space-between;">
+                    <span id="ssh-terminal-title">Terminal SSH: Não conectado</span>
+                    <span style="cursor: pointer; color: var(--accent-error);" onclick="disconnectSSH()">✕ Fechar</span>
+                </div>
+                <div class="terminal-output" id="ssh-terminal-output-area">Conectando...</div>
+                <div class="terminal-prompt-line">
+                    <span class="terminal-path" id="ssh-terminal-path-indicator">~</span>
+                    <input type="text" class="terminal-input" id="ssh-terminal-cmd-input" placeholder="Digite o comando..." autocomplete="off">
+                    
+                    <div class="autocomplete-dropdown" id="ssh-terminal-autocomplete">
                         <!-- Autocomplete matches will be injected here -->
                     </div>
                 </div>
@@ -268,6 +289,22 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
                 </div>
             </div>
 
+            <!-- Accordion Section: Terminal SSH -->
+            <div class="accordion-section collapsed" id="sec-terminal-ssh">
+                <div class="accordion-header" onclick="toggleAccordion('sec-terminal-ssh')">
+                    <span>🔌 Terminal SSH</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="accordion-content">
+                    <div class="sidebar-action-item" style="margin-bottom: 8px;">
+                        <button class="sidebar-btn btn-accent" onclick="openSSHModal()">➕ Nova Conexão SSH</button>
+                    </div>
+                    <div id="ssh-connections-list" class="sidebar-action-list">
+                        <!-- SSH connections render here -->
+                    </div>
+                </div>
+            </div>
+
         </div>
     </aside>
 
@@ -275,26 +312,75 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
     <div class="modal-overlay" id="modal-workspace">
         <div class="modal-card">
             <div class="modal-card-header">
-                <h3>Configurações do Workspace</h3>
+                <h3>Configurações Gerais</h3>
                 <button class="sidebar-close-btn" onclick="closeModal('modal-workspace')">✕</button>
             </div>
-            <div class="modal-card-body">
-                <div style="margin-bottom: 12px;">
-                    <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Usuário Mestre</label>
-                    <input type="text" class="form-input" id="ws-username-input" value="<?= htmlspecialchars($current_username) ?>">
+            <div class="modal-card-body" style="padding: 0;">
+                
+                <!-- Accordion: Workspace -->
+                <div class="modal-acc-section">
+                    <div class="modal-acc-header" onclick="toggleModalAccordion('acc-settings-workspace')">
+                        <span style="font-weight:600;">Workspace</span>
+                        <span class="acc-icon" id="icon-acc-settings-workspace">▼</span>
+                    </div>
+                    <div class="modal-acc-content acc-open" id="acc-settings-workspace">
+                        <div style="margin-bottom: 12px;">
+                            <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Caminho do Workspace Local (WORKSPACE_PATH)</label>
+                            <input type="text" class="form-input" id="ws-path-input" placeholder="Caminho do diretório local">
+                        </div>
+                        <div style="text-align: right;">
+                            <button class="btn btn-primary" onclick="saveWorkspaceSettings()">Salvar Workspace</button>
+                        </div>
+                    </div>
                 </div>
-                <div style="margin-bottom: 12px;">
-                    <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Nova Senha Mestre (Deixe em branco para não alterar)</label>
-                    <input type="password" class="form-input" id="ws-password-input" placeholder="••••••••">
+
+                <!-- Accordion: Usuário -->
+                <div class="modal-acc-section" style="border-top: 1px solid var(--border-color);">
+                    <div class="modal-acc-header" onclick="toggleModalAccordion('acc-settings-user')">
+                        <span style="font-weight:600;">Usuário</span>
+                        <span class="acc-icon" id="icon-acc-settings-user">▶</span>
+                    </div>
+                    <div class="modal-acc-content" id="acc-settings-user">
+                        <div style="margin-bottom: 12px;">
+                            <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Usuário Mestre</label>
+                            <input type="text" class="form-input" id="ws-username-input" value="<?= htmlspecialchars($current_username) ?>">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Nova Senha Mestre (Deixe em branco para não alterar)</label>
+                            <input type="password" class="form-input" id="ws-password-input" placeholder="••••••••">
+                        </div>
+                        <div style="text-align: right;">
+                            <button class="btn btn-primary" onclick="saveWorkspaceSettings()">Salvar Usuário</button>
+                        </div>
+                    </div>
                 </div>
-                <div style="margin-bottom: 12px;">
-                    <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Caminho do Workspace Local (WORKSPACE_PATH)</label>
-                    <input type="text" class="form-input" id="ws-path-input" placeholder="Caminho do diretório local">
+
+                <!-- Accordion: Sobre -->
+                <div class="modal-acc-section" style="border-top: 1px solid var(--border-color);">
+                    <div class="modal-acc-header" onclick="toggleModalAccordion('acc-settings-about')">
+                        <span style="font-weight:600;">Sobre</span>
+                        <span class="acc-icon" id="icon-acc-settings-about">▶</span>
+                    </div>
+                    <div class="modal-acc-content" id="acc-settings-about">
+                        <div style="text-align: center; padding: 10px;">
+                            <img src="logo.svg" alt="KodeWeb Logo" style="height: 64px; width: 64px; margin-bottom: 12px;">
+                            <h3>KodeWeb Lite</h3>
+                            <p style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
+                                Versão <?=$app_version ?> - 2026 <a href="https://laralabs.dev" target="_blank" style="color: var(--accent); text-decoration: none;">Laralabs</a>
+                            </p>
+                            <p style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
+                                <a href="https://github.com/laraantunes/kodeweblite" target="_blank" style="color: var(--accent); text-decoration: none;">https://github.com/laraantunes/kodeweblite</a>
+                            </p>
+                            <div style="margin-top: 20px;">
+                                <button class="btn btn-primary" id="btn-update-kodeweb-lite" onclick="updateKodeWebLite(this)">Buscar Atualizações</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
             </div>
             <div class="modal-card-footer">
-                <button class="btn" onclick="closeModal('modal-workspace')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveWorkspaceSettings()">Salvar</button>
+                <button class="btn" onclick="closeModal('modal-workspace')" style="width: 100%;">Fechar</button>
             </div>
         </div>
     </div>
@@ -411,7 +497,79 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
         </div>
     </div>
 
+    <!-- SSH Connection Modal -->
+    <div class="modal-overlay" id="modal-ssh">
+        <div class="modal-card">
+            <div class="modal-card-header">
+                <h3 id="ssh-modal-title">Nova Conexão SSH</h3>
+                <button class="sidebar-close-btn" onclick="closeModal('modal-ssh')">✕</button>
+            </div>
+            <div class="modal-card-body">
+                <input type="hidden" id="ssh-conn-id" value="">
+                <div style="margin-bottom: 10px;">
+                    <label class="form-label" style="display:block; margin-bottom:4px; font-size:12px;">Nome da Conexão</label>
+                    <input type="text" class="form-input" id="ssh-conn-name" placeholder="ex: Servidor de Produção" required>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:3;">
+                        <label class="form-label" style="display:block; margin-bottom:4px; font-size:12px;">Host / IP</label>
+                        <input type="text" class="form-input" id="ssh-conn-host" placeholder="192.168.1.100">
+                    </div>
+                    <div style="flex:1;">
+                        <label class="form-label" style="display:block; margin-bottom:4px; font-size:12px;">Porta</label>
+                        <input type="text" class="form-input" id="ssh-conn-port" placeholder="22">
+                    </div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label class="form-label" style="display:block; margin-bottom:4px; font-size:12px;">Usuário</label>
+                    <input type="text" class="form-input" id="ssh-conn-user" placeholder="root">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label class="form-label" style="display:block; margin-bottom:4px; font-size:12px;">Senha</label>
+                    <input type="password" class="form-input" id="ssh-conn-pass" placeholder="••••••••">
+                </div>
+            </div>
+            <div class="modal-card-footer">
+                <button class="btn btn-danger" id="ssh-btn-delete" style="display:none;" onclick="deleteSSHConnection()">Excluir</button>
+                <button class="btn" onclick="testSSHConnection()">Testar Conexão</button>
+                <button class="btn" onclick="closeModal('modal-ssh')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveSSHConnection()">Salvar</button>
+            </div>
+        </div>
+    </div>
     <!-- Dynamic Dialog Prompt for New Files/Folders -->
+    <!-- Save As Modal -->
+    <div class="modal-overlay" id="modal-save-as">
+        <div class="modal-card">
+            <div class="modal-card-header">
+                <h3>Salvar Como...</h3>
+                <button class="sidebar-close-btn" onclick="closeModal('modal-save-as')">✕</button>
+            </div>
+            <div class="modal-card-body" style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 13px;">Nome do Arquivo:</label>
+                    <input type="text" id="save-as-filename" class="form-input" placeholder="ex: novo_arquivo.php" style="width: 100%; box-sizing: border-box;">
+                </div>
+                
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 250px;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 13px;">Selecionar Pasta no Workspace:</label>
+                    <div id="save-as-tree" class="styled-scroll" style="flex: 1; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px; min-height: 250px;">
+                        <!-- tree loaded here -->
+                    </div>
+                </div>
+                
+                <div style="font-size: 13px; color: var(--text-muted);">
+                    Caminho selecionado: <span id="save-as-selected-path" style="color: var(--accent);">/</span>
+                </div>
+            </div>
+            <div class="modal-card-footer">
+                <button class="btn" onclick="executeSaveAsDownload()" style="margin-right: auto;">Download Local</button>
+                <button class="btn" onclick="closeModal('modal-save-as')">Cancelar</button>
+                <button class="btn btn-primary" onclick="executeSaveAs()">Salvar no Workspace</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="modal-prompt">
         <div class="modal-card" style="max-width: 350px;">
             <div class="modal-card-header">

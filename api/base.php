@@ -122,6 +122,30 @@ function get_ftp_connection($connection_id) {
     return $connInfo;
 }
 
+function get_ssh_connection($connection_id) {
+    global $rootDir;
+    if (empty($connection_id)) throw new Exception("Conexão SSH não especificada.");
+    $file = $rootDir . '/connections/' . $connection_id . '.enc';
+    if (!file_exists($file)) throw new Exception("Conexão SSH não encontrada.");
+    $encryptedData = file_get_contents($file);
+    $decryptedData = KodeWebEncryption::decrypt($encryptedData);
+    if (!$decryptedData) throw new Exception("Erro de descriptografia dos dados de conexão SSH.");
+    $connInfo = json_decode($decryptedData, true);
+    if (!$connInfo || !isset($connInfo['type']) || $connInfo['type'] !== 'ssh') throw new Exception("Dados de conexão SSH inválidos.");
+    return $connInfo;
+}
+
+function connect_ssh($connInfo) {
+    if (!class_exists('\phpseclib3\Net\SSH2')) throw new Exception("A biblioteca phpseclib não está carregada.");
+    $host = $connInfo['host'];
+    $port = !empty($connInfo['port']) ? (int)$connInfo['port'] : 22;
+    $username = $connInfo['username'];
+    $password = $connInfo['password'];
+    $ssh = new \phpseclib3\Net\SSH2($host, $port);
+    if (!$ssh->login($username, $password)) throw new Exception("Falha de autenticação SSH.");
+    return $ssh;
+}
+
 function connect_ftp($connInfo) {
     $host = $connInfo['host'];
     $port = !empty($connInfo['port']) ? (int)$connInfo['port'] : 21;

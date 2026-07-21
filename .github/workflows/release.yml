@@ -1,0 +1,42 @@
+name: Build and Release KodeWeb Lite
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, xml
+
+      - name: Install Dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Clean up dev and unneeded files
+        run: |
+          rm -rf .git
+          rm -rf .github
+          rm -f .gitignore
+          rm -f composer.json
+          rm -f composer.lock
+
+      - name: Create ZIP archive
+        run: zip -r kodeweb-release.zip .
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: kodeweb-lite-release.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

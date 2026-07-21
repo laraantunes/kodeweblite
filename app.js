@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLocalFiles();
     loadFtpConnections();
     loadDbConnections();
+    loadSSHConnections();
     initTerminal();
+    initSSHTerminal();
     setupKeyListeners();
 
     window.addEventListener('resize', () => {
@@ -65,10 +67,20 @@ function initEditor() {
 // Setup Global Key Listeners
 function setupKeyListeners() {
     document.addEventListener('keydown', (e) => {
-        // Ctrl + S: Save file
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        // Ctrl + S: Save file, Ctrl + Shift + S: Save As
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
             e.preventDefault();
-            saveActiveFile();
+            if (e.shiftKey) {
+                if (typeof openSaveAsModal === 'function') openSaveAsModal();
+            } else {
+                saveActiveFile();
+            }
+        }
+        
+        // Ctrl + N: New blank file
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'n' || e.key === 'N')) {
+            e.preventDefault();
+            if (typeof openNewBlankFile === 'function') openNewBlankFile();
         }
         // Alt + W: Close current tab
         if (e.altKey && e.key.toLowerCase() === 'w') {
@@ -132,6 +144,32 @@ function toggleAccordion(id) {
     section.classList.toggle('collapsed');
 }
 
+// Collapsible Accordions in Modals
+function toggleModalAccordion(id) {
+    const section = document.getElementById(id);
+    if (!section) return;
+    
+    const isOpen = section.classList.contains('acc-open');
+    
+    // Close all other accordions in the same modal
+    const modalBody = section.closest('.modal-card-body');
+    if (modalBody) {
+        modalBody.querySelectorAll('.modal-acc-content').forEach(content => {
+            content.classList.remove('acc-open');
+            const otherIcon = document.getElementById('icon-' + content.id);
+            if (otherIcon) otherIcon.innerText = '▶';
+        });
+    }
+    
+    const icon = document.getElementById('icon-' + id);
+    
+    if (!isOpen) {
+        // If it was closed, open it
+        section.classList.add('acc-open');
+        if (icon) icon.innerText = '▼';
+    }
+}
+
 // Switch main workspace view
 function switchView(viewId) {
     document.querySelectorAll('.workspace-view').forEach(view => {
@@ -158,6 +196,9 @@ function handleTabChange(tab) {
     } else if (tab.type === 'terminal') {
         switchView('view-terminal');
         document.getElementById('terminal-cmd-input').focus();
+    } else if (tab.type === 'ssh') {
+        switchView('view-ssh-terminal');
+        document.getElementById('ssh-terminal-cmd-input').focus();
     } else if (tab.type === 'db') {
         switchView('view-db');
     }
@@ -200,6 +241,9 @@ function openFile(name, path, isFtp = false, ftpConnId = '') {
         toggleSidebar(false);
         return;
     }
+    
+    if (window[`loading_tab_${tabId}`]) return;
+    window[`loading_tab_${tabId}`] = true;
 
     showToast(`Carregando ${name}...`);
 
@@ -239,11 +283,15 @@ function openFile(name, path, isFtp = false, ftpConnId = '') {
             activateTab(tabId);
             toggleSidebar(false);
         } else {
-            showToast(data.message || 'Erro ao carregar arquivo', 'error');
+            showToast(data.message || "Falha ao abrir arquivo", 'error');
         }
     })
     .catch(err => {
-        showToast(err.message, 'error');
+        console.error(err);
+        showToast("Erro de rede ao abrir arquivo", 'error');
+    })
+    .finally(() => {
+        delete window[`loading_tab_${tabId}`];
     });
 }
 
@@ -273,6 +321,28 @@ function openSpecialTab(type, id, name) {
     toggleSidebar(false);
 }
 
+window.openNewBlankFile = function() {
+    saveCurrentTabState();
+    
+    const unnamedId = 'Untitled-' + Date.now();
+    const tabId = `local-${unnamedId}`;
+    
+    const tab = {
+        id: tabId,
+        name: 'Sem Título',
+        path: unnamedId,
+        type: 'file',
+        connectionId: '',
+        content: '',
+        isNew: true
+    };
+    
+    state.openTabs.push(tab);
+    renderTabs();
+    activateTab(tabId);
+    toggleSidebar(false);
+};
+
 function saveCurrentTabState() {
     if (state.activeTabId) {
         const activeTab = state.openTabs.find(t => t.id === state.activeTabId);
@@ -291,6 +361,14 @@ function renderTabs() {
         const tabEl = document.createElement('div');
         tabEl.className = `tab ${tab.id === state.activeTabId ? 'active' : ''}`;
         tabEl.onclick = () => activateTab(tab.id);
+        
+        tabEl.addEventListener('auxclick', (event) => {
+            if (event.button === 1) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeTab(tab.id);
+            }
+        });
 
         let icon = '📄';
         if (tab.type === 'ftp') icon = '⚡';
@@ -360,6 +438,13 @@ function saveActiveFile() {
 
     const tab = state.openTabs.find(t => t.id === state.activeTabId);
     if (!tab || (tab.type !== 'file' && tab.type !== 'ftp')) return;
+
+    if (tab.isNew) {
+        if (typeof openSaveAsModal === 'function') {
+            openSaveAsModal();
+            return;
+        }
+    }
 
     const content = state.editor.getValue();
     showToast('Salvando arquivo...');
@@ -1190,8 +1275,8 @@ function initTerminal() {
     const input = document.getElementById('terminal-cmd-input');
     if (!input) return;
 
-    // Trigger base cmd to get CWD
-    runTerminalCommand('');
+    // Trigger base cmd to get CWD and reset it to workspace root
+    runTerminalCommand('', true);
 
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -1237,7 +1322,7 @@ function initTerminal() {
     });
 }
 
-function runTerminalCommand(cmd) {
+function runTerminalCommand(cmd, resetCwd = false) {
     const outputArea = document.getElementById('terminal-output-area');
     if (cmd !== '') {
         outputArea.innerText += `\n$ ${cmd}\n`;
@@ -1246,6 +1331,9 @@ function runTerminalCommand(cmd) {
     let formData = new FormData();
     formData.append('cmd', cmd);
     formData.append('terminal_id', 'default');
+    if (resetCwd) {
+        formData.append('reset', 'true');
+    }
 
     fetch('api/terminal.php?action=terminal_cmd', {
         method: 'POST',
@@ -1314,8 +1402,512 @@ function hideAutocomplete() {
     document.getElementById('terminal-autocomplete').style.display = 'none';
 }
 
+// --- Save As Logic ---
+let currentSaveAsPath = '';
+
+window.openSaveAsModal = function() {
+    const modal = document.getElementById('modal-save-as');
+    if (!modal) return;
+    
+    currentSaveAsPath = '';
+    document.getElementById('save-as-selected-path').textContent = '/';
+    document.getElementById('save-as-filename').value = '';
+    
+    if (state.activeTabId) {
+        const tab = state.openTabs.find(t => t.id === state.activeTabId);
+        if (tab && tab.name !== 'Sem Título') {
+            document.getElementById('save-as-filename').value = tab.name;
+        }
+    }
+    
+    renderSaveAsTree('');
+    modal.classList.add('open');
+};
+
+async function renderSaveAsTree(path) {
+    const container = document.getElementById('save-as-tree');
+    container.innerHTML = '<div style="padding: 10px; color: var(--text-muted);">Carregando...</div>';
+    
+    try {
+        const response = await fetch(`api/files.php?action=files_list&path=${encodeURIComponent(path)}`);
+        const data = await response.json();
+        
+        if (!data.success) throw new Error(data.message);
+        
+        container.innerHTML = '';
+        
+        if (path) {
+            const upRow = document.createElement('div');
+            upRow.style.cursor = 'pointer';
+            upRow.style.padding = '4px 8px';
+            upRow.innerHTML = `<span>📁 .. (Voltar)</span>`;
+            upRow.addEventListener('click', () => {
+                const normalizedPath = path.replace(/\\/g, '/');
+                const parts = normalizedPath.split('/');
+                parts.pop();
+                const parentPath = parts.join('/');
+                currentSaveAsPath = parentPath;
+                document.getElementById('save-as-selected-path').textContent = '/' + (currentSaveAsPath || '');
+                renderSaveAsTree(parentPath);
+            });
+            container.appendChild(upRow);
+        }
+        
+        data.files.forEach(file => {
+            if (!file.is_dir) return; 
+            
+            const row = document.createElement('div');
+            row.style.cursor = 'pointer';
+            row.style.padding = '4px 8px';
+            row.innerHTML = `<span>📁 ${file.name}</span>`;
+            
+            row.addEventListener('click', () => {
+                currentSaveAsPath = file.path.replace(/\\/g, '/');
+                document.getElementById('save-as-selected-path').textContent = '/' + currentSaveAsPath;
+                renderSaveAsTree(currentSaveAsPath);
+            });
+            container.appendChild(row);
+        });
+        
+        if (container.children.length === 0) {
+            container.innerHTML = '<div style="padding: 10px; color: var(--text-muted);">Nenhuma pasta encontrada</div>';
+        }
+    } catch (err) {
+        container.innerHTML = `<div style="padding: 10px; color: red;">Erro: ${err.message}</div>`;
+    }
+}
+
+window.executeSaveAs = async function() {
+    const filename = document.getElementById('save-as-filename').value.trim();
+    if (!filename) {
+        showToast("Por favor, informe o nome do arquivo.", "error");
+        return;
+    }
+    
+    const fullPath = (currentSaveAsPath ? currentSaveAsPath + '/' : '') + filename;
+    const content = state.editor.getValue();
+    
+    const formData = new FormData();
+    formData.append('path', fullPath);
+    formData.append('content', content);
+    
+    try {
+        const response = await fetch('api/files.php?action=file_save', { method: 'POST', body: formData });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast("Arquivo salvo com sucesso!", "success");
+            closeModal('modal-save-as');
+            
+            const oldId = state.activeTabId;
+            const tab = state.openTabs.find(t => t.id === oldId);
+            if (tab) {
+                tab.path = fullPath;
+                tab.name = filename;
+                tab.isNew = false;
+                tab.id = `local-${fullPath}`;
+                tab.content = content;
+                
+                state.activeTabId = tab.id;
+            }
+            renderTabs();
+            loadLocalFiles();
+        } else {
+            showToast("Erro ao salvar: " + data.message, "error");
+        }
+    } catch (err) {
+        showToast("Erro na requisição: " + err.message, "error");
+    }
+};
+
+window.executeSaveAsDownload = function() {
+    const filename = document.getElementById('save-as-filename').value.trim() || 'novo_arquivo.txt';
+    const content = state.editor.getValue();
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    closeModal('modal-save-as');
+};
+
 function getBasename(path) {
     const sep = path.indexOf('\\') !== -1 ? '\\' : '/';
     const parts = path.split(sep);
     return parts.pop() || path;
 }
+
+// --- SSH Terminal Logic ---
+let sshConnections = [];
+let activeSshId = null;
+let sshTerminalHistory = [];
+let sshTerminalHistoryIdx = -1;
+let sshAutocompleteList = [];
+
+window.loadSSHConnections = function() {
+    fetch('api/ssh.php?action=ssh_connections_list')
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            sshConnections = data.connections;
+            renderSSHConnections();
+        }
+    });
+}
+
+function renderSSHConnections() {
+    const container = document.getElementById('ssh-connections-list');
+    if (!container) return;
+    container.innerHTML = '';
+    sshConnections.forEach(conn => {
+        const div = document.createElement('div');
+        div.className = 'sidebar-action-item';
+        div.style.display = 'flex';
+        div.style.gap = '4px';
+        div.innerHTML = `
+            <button class="sidebar-btn" style="flex:1;" onclick="openSSHTerminal('${conn.id}', '${htmlEscape(conn.name)}')">🔌 ${htmlEscape(conn.name)}</button>
+            <button class="btn" style="padding: 4px 8px;" onclick="editSSHConnection('${conn.id}')">✏️</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.openSSHModal = function() {
+    document.getElementById('ssh-conn-id').value = '';
+    document.getElementById('ssh-conn-name').value = '';
+    document.getElementById('ssh-conn-host').value = '';
+    document.getElementById('ssh-conn-port').value = '22';
+    document.getElementById('ssh-conn-user').value = '';
+    document.getElementById('ssh-conn-pass').value = '';
+    document.getElementById('ssh-btn-delete').style.display = 'none';
+    document.getElementById('ssh-modal-title').innerText = 'Nova Conexão SSH';
+    document.getElementById('modal-ssh').classList.add('open');
+};
+
+window.editSSHConnection = function(id) {
+    const conn = sshConnections.find(c => c.id === id);
+    if (!conn) return;
+    document.getElementById('ssh-conn-id').value = conn.id;
+    document.getElementById('ssh-conn-name').value = conn.name;
+    document.getElementById('ssh-conn-host').value = conn.host;
+    document.getElementById('ssh-conn-port').value = conn.port;
+    document.getElementById('ssh-conn-user').value = conn.username;
+    document.getElementById('ssh-conn-pass').value = conn.has_password ? '********' : '';
+    document.getElementById('ssh-btn-delete').style.display = 'inline-block';
+    document.getElementById('ssh-modal-title').innerText = 'Editar Conexão SSH';
+    document.getElementById('modal-ssh').classList.add('open');
+};
+
+window.saveSSHConnection = function() {
+    const formData = new FormData();
+    formData.append('id', document.getElementById('ssh-conn-id').value);
+    formData.append('name', document.getElementById('ssh-conn-name').value);
+    formData.append('host', document.getElementById('ssh-conn-host').value);
+    formData.append('port', document.getElementById('ssh-conn-port').value);
+    formData.append('username', document.getElementById('ssh-conn-user').value);
+    formData.append('password', document.getElementById('ssh-conn-pass').value);
+
+    fetch('api/ssh.php?action=ssh_connection_save', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Conexão SSH salva com sucesso!', 'success');
+            closeModal('modal-ssh');
+            loadSSHConnections();
+        } else {
+            showToast(data.message || 'Erro ao salvar conexão SSH', 'error');
+        }
+    })
+    .catch(err => showToast(err.message, 'error'));
+};
+
+window.testSSHConnection = function() {
+    showToast('Testando conexão SSH...', 'info');
+    const formData = new FormData();
+    const id = document.getElementById('ssh-conn-id').value;
+    if (id && document.getElementById('ssh-conn-pass').value === '********') {
+        formData.append('connection_id', id);
+    } else {
+        formData.append('host', document.getElementById('ssh-conn-host').value);
+        formData.append('port', document.getElementById('ssh-conn-port').value);
+        formData.append('username', document.getElementById('ssh-conn-user').value);
+        formData.append('password', document.getElementById('ssh-conn-pass').value);
+    }
+
+    fetch('api/ssh.php?action=ssh_test_connection', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message || 'Falha na conexão SSH', 'error');
+        }
+    })
+    .catch(err => showToast(err.message, 'error'));
+};
+
+window.deleteSSHConnection = function() {
+    if (!confirm('Tem certeza que deseja excluir esta conexão SSH?')) return;
+    const id = document.getElementById('ssh-conn-id').value;
+    const formData = new FormData();
+    formData.append('id', id);
+
+    fetch('api/ssh.php?action=ssh_connection_delete', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Conexão excluída.', 'success');
+            closeModal('modal-ssh');
+            loadSSHConnections();
+            if (activeSshId === id) disconnectSSH();
+        } else {
+            showToast(data.message || 'Erro ao excluir', 'error');
+        }
+    })
+    .catch(err => showToast(err.message, 'error'));
+};
+
+window.openSSHTerminal = function(connId, connName) {
+    activeSshId = connId;
+    
+    const tabId = 'ssh-' + connId;
+    const tabName = '[SSH: ' + connName + ']';
+    
+    // Check if tab is already open
+    const existing = state.openTabs.find(t => t.id === tabId);
+    if (existing) {
+        activateTab(tabId);
+        toggleSidebar(false);
+        return;
+    }
+
+    const tab = {
+        id: tabId,
+        name: tabName,
+        path: 'ssh-terminal',
+        type: 'ssh',
+        connectionId: connId,
+        content: ''
+    };
+    state.openTabs.push(tab);
+    renderTabs();
+    activateTab(tabId);
+    toggleSidebar(false);
+    
+    document.getElementById('ssh-terminal-title').innerText = 'Terminal SSH: ' + connName;
+    document.getElementById('ssh-terminal-output-area').innerHTML = '<div style="color:var(--text-muted);">Conectando...</div>';
+    document.getElementById('ssh-terminal-cmd-input').value = '';
+    sshTerminalHistory = [];
+    sshTerminalHistoryIdx = -1;
+    
+    runSSHCmd('');
+};
+
+window.disconnectSSH = function() {
+    activeSshId = null;
+    document.getElementById('ssh-terminal-title').innerText = 'Terminal SSH: Não conectado';
+    document.getElementById('ssh-terminal-output-area').innerHTML = '<div style="color:var(--accent-error);">Desconectado.</div>';
+    document.getElementById('ssh-terminal-path-indicator').innerText = '~';
+};
+
+window.runSSHCmd = function(cmd) {
+    if (!activeSshId) {
+        showToast('Nenhuma conexão SSH ativa.', 'error');
+        return;
+    }
+    
+    const outputArea = document.getElementById('ssh-terminal-output-area');
+    const input = document.getElementById('ssh-terminal-cmd-input');
+    const pathInd = document.getElementById('ssh-terminal-path-indicator');
+    
+    if (cmd !== '') {
+        outputArea.innerHTML += `<div class="terminal-line"><span style="color:var(--accent);">${pathInd.innerText}</span> $ ${htmlEscape(cmd)}</div>`;
+        outputArea.scrollTop = outputArea.scrollHeight;
+    }
+    
+    const formData = new FormData();
+    formData.append('connection_id', activeSshId);
+    formData.append('cmd', cmd);
+    formData.append('terminal_id', 'lite');
+    
+
+    fetch('api/ssh.php?action=ssh_terminal_cmd', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (cmd === '') {
+                outputArea.innerHTML = '<div style="color:var(--accent-success);">Conectado com sucesso.</div>';
+            } else if (data.output && data.output.trim() !== '') {
+                outputArea.innerHTML += `<div class="terminal-line">${htmlEscape(data.output).replace(/\n/g, '<br>')}</div>`;
+            }
+            if (data.cwd) {
+                pathInd.innerText = data.cwd;
+            }
+            if (data.autocomplete_list) {
+                sshAutocompleteList = data.autocomplete_list;
+            }
+            outputArea.scrollTop = outputArea.scrollHeight;
+        } else {
+            outputArea.innerHTML += `<div class="terminal-line" style="color:var(--accent-error);">Erro: ${htmlEscape(data.message)}</div>`;
+            outputArea.scrollTop = outputArea.scrollHeight;
+            if (data.message && data.message.includes('autenticação')) disconnectSSH();
+        }
+    })
+    .catch(err => {
+        outputArea.innerHTML += `<div class="terminal-line" style="color:var(--accent-error);">Erro: ${htmlEscape(err.message)}</div>`;
+        outputArea.scrollTop = outputArea.scrollHeight;
+    });
+};
+
+window.initSSHTerminal = function() {
+    const input = document.getElementById('ssh-terminal-cmd-input');
+    if (!input) return;
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const cmd = input.value.trim();
+            if (cmd === 'clear') {
+                document.getElementById('ssh-terminal-output-area').innerText = '';
+                input.value = '';
+                return;
+            }
+            if (cmd !== '') {
+                sshTerminalHistory.push(cmd);
+                sshTerminalHistoryIdx = sshTerminalHistory.length;
+            }
+            runSSHCmd(cmd);
+            input.value = '';
+            hideSSHAutocomplete();
+        }
+        
+        // History Navigation
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (sshTerminalHistory.length > 0 && sshTerminalHistoryIdx > 0) {
+                sshTerminalHistoryIdx--;
+                input.value = sshTerminalHistory[sshTerminalHistoryIdx];
+            }
+        }
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (sshTerminalHistory.length > 0 && sshTerminalHistoryIdx < sshTerminalHistory.length - 1) {
+                sshTerminalHistoryIdx++;
+                input.value = sshTerminalHistory[sshTerminalHistoryIdx];
+            } else {
+                sshTerminalHistoryIdx = sshTerminalHistory.length;
+                input.value = '';
+            }
+        }
+        
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            handleSSHTabComplete();
+        }
+    });
+    
+    // Click outside autocomplete to hide
+    document.addEventListener('click', (e) => {
+        if (e.target.id !== 'ssh-terminal-cmd-input' && !e.target.classList.contains('autocomplete-item')) {
+            hideSSHAutocomplete();
+        }
+    });
+};
+
+function handleSSHTabComplete() {
+    const input = document.getElementById('ssh-terminal-cmd-input');
+    const value = input.value;
+    const words = value.split(' ');
+    const lastWord = words.pop();
+
+    if (lastWord === '') return;
+
+    const matches = sshAutocompleteList.filter(item => item.toLowerCase().startsWith(lastWord.toLowerCase()));
+    
+    if (matches.length === 1) {
+        words.push(matches[0]);
+        input.value = words.join(' ');
+    } else if (matches.length > 1) {
+        showSSHAutocomplete(matches, lastWord);
+    }
+}
+
+function showSSHAutocomplete(matches, query) {
+    const dropdown = document.getElementById('ssh-terminal-autocomplete');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+    dropdown.style.display = 'block';
+
+    matches.forEach(match => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.innerText = match;
+        item.onclick = () => {
+            const input = document.getElementById('ssh-terminal-cmd-input');
+            const words = input.value.split(' ');
+            words.pop();
+            words.push(match);
+            input.value = words.join(' ');
+            hideSSHAutocomplete();
+            input.focus();
+        };
+        dropdown.appendChild(item);
+    });
+}
+
+function hideSSHAutocomplete() {
+    const dropdown = document.getElementById('ssh-terminal-autocomplete');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+window.updateKodeWebLite = function(btn) {
+    if (!confirm('Deseja realmente buscar e instalar a última atualização do KodeWeb Lite? Isso pode sobrescrever modificações locais.')) return;
+    
+    btn.innerText = 'Atualizando...';
+    btn.disabled = true;
+    
+    fetch('api/system.php?action=update_kodeweb')
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            showToast(data.message || 'Erro ao atualizar', 'error');
+            btn.innerText = 'Buscar Atualizações';
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        showToast('Erro de conexão ao tentar atualizar.', 'error');
+        btn.innerText = 'Buscar Atualizações';
+        btn.disabled = false;
+    });
+};
+
+// Global Escape key listener to close modals
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(modal => {
+            modal.classList.remove('open');
+        });
+    }
+});
