@@ -107,6 +107,10 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
                         <kbd>Ctrl + Enter</kbd>
                     </div>
                 </div>
+                
+                <p style="margin-top: 30px; font-size: 13px; color: var(--text-muted); text-align: center;">
+                    <?=$app_version ?> - 2026 <a href="https://laralabs.dev" target="_blank" style="color: var(--accent); text-decoration: none;">Laralabs</a> em <a href="https://kodeweb.app.br" target="_blank" style="color: var(--accent); text-decoration: none;">kodeweb.app.br</a>
+                </p>
             </div>
             <div id="editor" class="hidden"></div>
         </section>
