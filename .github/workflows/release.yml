@@ -32,7 +32,7 @@ jobs:
           rm -f composer.lock
 
       - name: Create ZIP archive
-        run: zip -r kodeweb-release.zip .
+        run: zip -r kodeweb-lite-release.zip .
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
