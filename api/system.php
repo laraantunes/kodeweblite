@@ -22,7 +22,7 @@ try {
             
             $zipUrl = '';
             foreach ($assets as $asset) {
-                if (strpos($asset['name'], 'kodeweblite') !== false && strpos($asset['name'], '.zip') !== false) {
+                if (strpos($asset['name'], 'kodeweb') !== false && strpos($asset['name'], '.zip') !== false) {
                     $zipUrl = $asset['browser_download_url'];
                     break;
                 }
