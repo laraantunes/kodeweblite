@@ -120,7 +120,23 @@ async function handleSharedData() {
     
     const shareError = urlParams.get('share_error');
     if (shareError) {
-        showToast("Erro ao processar o arquivo compartilhado. Tente novamente.", "error");
+        showToast("Detalhe do Erro Share: " + shareError, "error");
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    const serverSharedCount = urlParams.get('server_shared_files');
+    const serverSharedNames = urlParams.get('shared_names');
+    if (serverSharedCount && parseInt(serverSharedCount) > 0) {
+        showToast(serverSharedCount + " arquivo(s) compartilhado(s) recebido(s) via Servidor!", "success");
+        loadLocalFiles();
+        
+        if (serverSharedNames) {
+            const names = serverSharedNames.split(',');
+            if (names.length > 0) {
+                setTimeout(() => openLocalFile('shared/' + names[0]), 500);
+            }
+        }
+        
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }

@@ -9,6 +9,20 @@ try {
             $relativePath = $_GET['path'] ?? '';
             $absPath = get_absolute_path($relativePath);
             
+            // Auto-cleanup shared folder (older than 7 days) on file list load (usually app boot)
+            if ($relativePath === '') {
+                $sharedDir = get_absolute_path('shared');
+                if (is_dir($sharedDir)) {
+                    $files = glob($sharedDir . '/*');
+                    $oneWeekAgo = time() - (7 * 24 * 60 * 60);
+                    foreach ($files as $file) {
+                        if (is_file($file) && filemtime($file) < $oneWeekAgo) {
+                            @unlink($file);
+                        }
+                    }
+                }
+            }
+            
             if (!is_dir($absPath)) {
                 throw new Exception("Diretório não encontrado: " . htmlspecialchars($relativePath));
             }

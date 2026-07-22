@@ -55,7 +55,7 @@ self.addEventListener('fetch', (e) => {
                 return Response.redirect(redirectUrl.href, 303);
             } catch (err) {
                 const errUrl = new URL('./', e.request.url);
-                errUrl.searchParams.set('share_error', '1');
+                errUrl.searchParams.set('share_error', 'sw_catch_' + (err.message || 'unknown'));
                 return Response.redirect(errUrl.href, 303);
             }
         })());
