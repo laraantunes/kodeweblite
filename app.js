@@ -57,8 +57,8 @@ async function handleSharedData() {
         const cache = await caches.open('kodeweb-shared-cache');
         
         for (let i = 0; i < count; i++) {
-            const req = new Request('/shared-file-' + i);
-            const res = await cache.match(req);
+            const reqUrl = '/shared-file-' + i;
+            const res = await cache.match(reqUrl);
             if (res) {
                 const blob = await res.blob();
                 const contentDisp = res.headers.get('Content-Disposition');
@@ -89,7 +89,7 @@ async function handleSharedData() {
                 };
                 
                 state.openTabs.push(tab);
-                await cache.delete(req);
+                await cache.delete(reqUrl);
             }
         }
         renderTabs();
@@ -115,6 +115,12 @@ async function handleSharedData() {
         state.openTabs.push(tab);
         renderTabs();
         activateTab(tabId);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    const shareError = urlParams.get('share_error');
+    if (shareError) {
+        showToast("Erro ao processar o arquivo compartilhado. Tente novamente.", "error");
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }

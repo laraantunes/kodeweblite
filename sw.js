@@ -34,10 +34,11 @@ self.addEventListener('fetch', (e) => {
                 if (files && files.length > 0) {
                     for (let i = 0; i < files.length; i++) {
                         const file = files[i];
-                        if (file instanceof File && file.name) {
+                        if (file) {
+                            let fileName = file.name || 'shared_file_' + i;
                             await cache.put(
-                                new Request('/shared-file-' + i),
-                                new Response(file, { headers: { 'Content-Type': file.type, 'Content-Disposition': `attachment; filename="${file.name}"` } })
+                                '/shared-file-' + i,
+                                new Response(file, { headers: { 'Content-Type': file.type || 'application/octet-stream', 'Content-Disposition': `attachment; filename="${fileName}"` } })
                             );
                             fileCount++;
                         }
