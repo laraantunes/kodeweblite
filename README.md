@@ -1,6 +1,6 @@
 # KodeWeb Lite
 
-O KodeWeb Lite é um ambiente de desenvolvimento web integrado (IDE) leve com foco em ser acessado via celulares, desenvolvido em PHP, HTML, CSS e JavaScript. Ele fornece ferramentas essenciais para gerenciar projetos, acessar servidores e editar código diretamente do navegador, sem a necessidade de configurações complexas.
+Irmão mais novo do [KodeWeb IDE](https://github.com/laraantunes/kodeweb), o KodeWeb Lite é um ambiente de desenvolvimento web integrado (IDE) leve com foco em ser acessado via celulares, desenvolvido em PHP, HTML, CSS e JavaScript. Ele fornece ferramentas essenciais para gerenciar projetos, acessar servidores e editar código diretamente do navegador, sem a necessidade de configurações complexas.
 
 ## 🚀 Funcionalidades
 
