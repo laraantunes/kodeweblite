@@ -1,6 +1,6 @@
 <?php
 // config.php - Configuration for KodeWeb Lite
-$app_version = "v1.2.2-lite";
+$app_version = "v1.2.3-lite";
 
 $local = false;
 $env_file = __DIR__ . '/.env';

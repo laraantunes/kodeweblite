@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kodeweb-lite-pwa-cache-v2';
+const CACHE_NAME = 'kodeweb-lite-pwa-cache-v3';
 
 self.addEventListener('install', (e) => {
     self.skipWaiting();
@@ -20,7 +20,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
     const url = new URL(e.request.url);
 
-    if (e.request.method === 'POST' && url.pathname.endsWith('/share_target')) {
+    if (e.request.method === 'POST' && url.pathname.includes('share_target')) {
         e.respondWith((async () => {
             try {
                 const formData = await e.request.formData();
