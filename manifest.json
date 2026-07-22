@@ -25,7 +25,27 @@
       "files": [
         {
           "name": "shared_file",
-          "accept": ["text/*", "image/*", "application/*", "*/*"]
+          "accept": [
+            "text/*", 
+            "image/*", 
+            "application/pdf",
+            ".pdf",
+            ".txt",
+            ".json",
+            ".js",
+            ".ts",
+            ".css",
+            ".html",
+            ".php",
+            ".sql",
+            ".md",
+            ".xml",
+            ".csv",
+            ".yaml",
+            ".yml",
+            ".env",
+            ".sh"
+          ]
         }
       ]
     }
