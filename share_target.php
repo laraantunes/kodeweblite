@@ -22,18 +22,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($files['error'][$i] === UPLOAD_ERR_OK) {
                     $name = basename($files['name'][$i]);
                     if (empty($name)) $name = 'shared_file_' . time() . '_' . $i;
-                    move_uploaded_file($files['tmp_name'][$i], $sharedDir . DIRECTORY_SEPARATOR . $name);
-                    $fileNames[] = $name;
-                    $sharedCount++;
+                    if (move_uploaded_file($files['tmp_name'][$i], $sharedDir . DIRECTORY_SEPARATOR . $name)) {
+                        $fileNames[] = $name;
+                        $sharedCount++;
+                    }
                 }
             }
         } else {
             if ($files['error'] === UPLOAD_ERR_OK) {
                 $name = basename($files['name']);
                 if (empty($name)) $name = 'shared_file_' . time();
-                move_uploaded_file($files['tmp_name'], $sharedDir . DIRECTORY_SEPARATOR . $name);
-                $fileNames[] = $name;
-                $sharedCount++;
+                if (move_uploaded_file($files['tmp_name'], $sharedDir . DIRECTORY_SEPARATOR . $name)) {
+                    $fileNames[] = $name;
+                    $sharedCount++;
+                }
             }
         }
     }

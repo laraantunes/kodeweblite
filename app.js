@@ -133,7 +133,7 @@ async function handleSharedData() {
         if (serverSharedNames) {
             const names = serverSharedNames.split(',');
             if (names.length > 0) {
-                setTimeout(() => openLocalFile('shared/' + names[0]), 500);
+                setTimeout(() => openFile(names[0], 'shared/' + names[0], false), 500);
             }
         }
         
