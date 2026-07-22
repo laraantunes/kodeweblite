@@ -126,6 +126,7 @@ async function handleSharedData() {
     
     const serverSharedCount = urlParams.get('server_shared_files');
     const serverSharedNames = urlParams.get('shared_names');
+    const serverSharedPath = urlParams.get('shared_path') || 'shared';
     if (serverSharedCount && parseInt(serverSharedCount) > 0) {
         showToast(serverSharedCount + " arquivo(s) compartilhado(s) recebido(s) via Servidor!", "success");
         loadLocalFiles();
@@ -133,7 +134,7 @@ async function handleSharedData() {
         if (serverSharedNames) {
             const names = serverSharedNames.split(',');
             if (names.length > 0) {
-                setTimeout(() => openFile(names[0], 'shared/' + names[0], false), 500);
+                setTimeout(() => openFile(names[0], serverSharedPath + '/' + names[0], false), 500);
             }
         }
         
@@ -849,6 +850,25 @@ function loadWorkspaceStatus() {
 function openWorkspaceModal() {
     loadWorkspaceStatus();
     openModal('modal-workspace');
+}
+
+async function cleanSharedFolder() {
+    if (!confirm('Deseja realmente apagar todos os arquivos da pasta compartilhada? Essa ação não pode ser desfeita.')) return;
+    
+    showToast("Limpando pasta compartilhada...");
+    try {
+        const response = await fetch('api/files.php?action=clean_shared', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast("Pasta compartilhada limpa com sucesso!", "success");
+            loadLocalFiles();
+        } else {
+            showToast(data.message || "Erro ao limpar pasta", "error");
+        }
+    } catch (err) {
+        showToast("Erro na requisição", "error");
+    }
 }
 
 function saveWorkspaceSettings() {

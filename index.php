@@ -338,8 +338,11 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
                             <label class="form-label" style="display:block; margin-bottom:6px; font-size:12px; color:var(--text-muted);">Caminho do Workspace Local (WORKSPACE_PATH)</label>
                             <input type="text" class="form-input" id="ws-path-input" placeholder="Caminho do diretório local">
                         </div>
-                        <div style="text-align: right;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <button class="btn btn-primary" onclick="saveWorkspaceSettings()">Salvar Workspace</button>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top:10px;">
+                            <button class="btn btn-danger" onclick="cleanSharedFolder()">Limpar Arquivos Compartilhados</button>
                         </div>
                     </div>
                 </div>

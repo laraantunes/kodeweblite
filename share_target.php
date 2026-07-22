@@ -5,9 +5,8 @@ require_once __DIR__ . '/api/base.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sharedCount = 0;
     
-    // Save to a "shared" folder in the current workspace
-    $sharedRelPath = 'shared';
-    $sharedDir = get_absolute_path($sharedRelPath);
+    // Save to a "shared" folder inside kodeweb-lite
+    $sharedDir = __DIR__ . DIRECTORY_SEPARATOR . 'shared';
     
     if (!is_dir($sharedDir)) {
         mkdir($sharedDir, 0755, true);
@@ -40,8 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    $appDirRelPath = ltrim(str_replace(WORKSPACE_ROOT, '', __DIR__), DIRECTORY_SEPARATOR);
+    $sharedRelPath = $appDirRelPath ? $appDirRelPath . '/shared' : 'shared';
+    $sharedRelPath = str_replace('\\', '/', $sharedRelPath);
+    
     $filesQuery = urlencode(implode(',', $fileNames));
-    header("Location: index.php?server_shared_files=" . $sharedCount . "&shared_names=" . $filesQuery);
+    header("Location: index.php?server_shared_files=" . $sharedCount . "&shared_names=" . $filesQuery . "&shared_path=" . urlencode($sharedRelPath));
     exit;
 }
 

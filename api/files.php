@@ -4,6 +4,21 @@ require_once __DIR__ . '/base.php';
 
 try {
     switch ($action) {
+        case 'clean_shared':
+            $sharedDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'shared';
+            $count = 0;
+            if (is_dir($sharedDir)) {
+                $files = glob($sharedDir . '/*');
+                foreach ($files as $file) {
+                    if (is_file($file)) {
+                        @unlink($file);
+                        $count++;
+                    }
+                }
+            }
+            echo json_encode(['success' => true, 'count' => $count]);
+            break;
+
         case 'files_list':
             // List files in a directory on-demand
             $relativePath = $_GET['path'] ?? '';
@@ -11,7 +26,7 @@ try {
             
             // Auto-cleanup shared folder (older than 7 days) on file list load (usually app boot)
             if ($relativePath === '') {
-                $sharedDir = get_absolute_path('shared');
+                $sharedDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'shared';
                 if (is_dir($sharedDir)) {
                     $files = glob($sharedDir . '/*');
                     $oneWeekAgo = time() - (7 * 24 * 60 * 60);
