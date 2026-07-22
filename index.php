@@ -38,7 +38,7 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KodeWeb Lite</title>
     <link rel="icon" type="image/svg+xml" href="logo.svg">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
     
     <!-- PWA configuration -->
     <link rel="manifest" href="manifest.json">
@@ -610,7 +610,7 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
     <div id="toast-container"></div>
 
     <!-- Link App logic -->
-    <script src="app.js"></script>
+    <script src="app.js?v=<?= filemtime(__DIR__ . '/app.js') ?>"></script>
 
 </body>
 </html>
