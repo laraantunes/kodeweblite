@@ -198,9 +198,10 @@ try {
             if (@ftp_get($ftp, $tempFile, $path, FTP_BINARY)) {
                 $content = file_get_contents($tempFile);
                 $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-                $isImage = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico']);
-                if ($isImage) {
-                    $mime = mime_content_type($tempFile) ?: 'image/jpeg';
+                $isMedia = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'pdf']);
+                if ($isMedia) {
+                    $mime = mime_content_type($tempFile);
+                    if (!$mime) $mime = ($ext === 'pdf') ? 'application/pdf' : 'image/jpeg';
                     $content = 'data:' . $mime . ';base64,' . base64_encode($content);
                 }
                 unlink($tempFile);

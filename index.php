@@ -70,8 +70,8 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
         
         <div class="right-header-section">
             <button class="header-action-btn" onclick="openNewBlankFile()" title="Novo Arquivo em Branco (Ctrl+N)">📄</button>
-            <button class="header-action-btn" onclick="saveActiveFile()" title="Salvar Arquivo (Ctrl+S)">💾</button>
-            <button class="header-action-btn" onclick="openSaveAsModal()" title="Salvar Como... (Ctrl+Shift+S)">📤</button>
+            <button class="header-action-btn" id="btn-save-file" onclick="saveActiveFile()" title="Salvar Arquivo (Ctrl+S)" style="display:none;">💾</button>
+            <button class="header-action-btn" id="btn-save-as" onclick="openSaveAsModal()" title="Salvar Como... (Ctrl+Shift+S)" style="display:none;">📤</button>
             <button class="header-action-btn" onclick="openWorkspaceModal()" title="Configurar Workspace">⚙️</button>
             <a href="logout.php" class="header-action-btn" title="Sair" style="text-decoration: none;">🚪</a>
         </div>
@@ -113,6 +113,12 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
                 </p>
             </div>
             <div id="editor" class="hidden"></div>
+        </section>
+
+        <!-- Media View (Images, PDF) -->
+        <section id="view-media" class="workspace-view">
+            <div id="media-container" style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: var(--bg-primary);">
+            </div>
         </section>
 
         <!-- Database Explorer View -->
@@ -566,10 +572,15 @@ if (file_exists($user_settings_file) && class_exists('Symfony\Component\Yaml\Yam
                     Caminho selecionado: <span id="save-as-selected-path" style="color: var(--accent);">/</span>
                 </div>
             </div>
-            <div class="modal-card-footer">
-                <button class="btn" onclick="executeSaveAsDownload()" style="margin-right: auto;">Download Local</button>
-                <button class="btn" onclick="closeModal('modal-save-as')">Cancelar</button>
-                <button class="btn btn-primary" onclick="executeSaveAs()">Salvar no Workspace</button>
+            <div class="modal-card-footer" style="flex-wrap: wrap; justify-content: space-between;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn" onclick="executeShareFile()" title="Exportar para apps">Compartilhar</button>
+                    <button class="btn" onclick="executeSaveAsDownload()">Download</button>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn" onclick="closeModal('modal-save-as')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="executeSaveAs()">Salvar</button>
+                </div>
             </div>
         </div>
     </div>

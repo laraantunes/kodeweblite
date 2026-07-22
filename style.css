@@ -665,7 +665,7 @@ body {
 /* Toast System */
 #toast-container {
     position: fixed;
-    top: 12px;
+    bottom: 12px;
     right: 12px;
     left: 12px;
     z-index: 10000;
@@ -688,7 +688,7 @@ body {
     align-items: center;
     justify-content: space-between;
     pointer-events: auto;
-    animation: slideInDown 0.3s ease-out;
+    animation: slideInUp 0.3s ease-out;
 }
 
 .toast.toast-error {
@@ -699,9 +699,9 @@ body {
     border-left-color: var(--accent-success);
 }
 
-@keyframes slideInDown {
+@keyframes slideInUp {
     from {
-        transform: translateY(-20px);
+        transform: translateY(20px);
         opacity: 0;
     }
     to {

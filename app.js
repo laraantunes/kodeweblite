@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
     initSSHTerminal();
     setupKeyListeners();
+    handleSharedData();
 
     window.addEventListener('resize', () => {
         if (state.editor) {
@@ -44,6 +45,79 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error('Erro ao registrar Service Worker (app):', err));
     }
 });
+
+async function handleSharedData() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedCount = urlParams.get('shared_files');
+    const sharedText = urlParams.get('shared_text');
+    const sharedUrl = urlParams.get('shared_url');
+    
+    if (sharedCount) {
+        const count = parseInt(sharedCount);
+        const cache = await caches.open('kodeweb-shared-cache');
+        
+        for (let i = 0; i < count; i++) {
+            const req = new Request('/shared-file-' + i);
+            const res = await cache.match(req);
+            if (res) {
+                const blob = await res.blob();
+                const contentDisp = res.headers.get('Content-Disposition');
+                let filename = 'shared_file.txt';
+                if (contentDisp) {
+                    const match = contentDisp.match(/filename="([^"]+)"/);
+                    if (match) filename = match[1];
+                }
+                const ext = filename.split('.').pop().toLowerCase();
+                const isMedia = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'pdf'].includes(ext);
+                
+                let content = '';
+                if (isMedia) {
+                    content = URL.createObjectURL(blob);
+                } else {
+                    content = await blob.text();
+                }
+                
+                const tabId = 'local-shared-' + Date.now() + i;
+                const tab = {
+                    id: tabId,
+                    name: filename,
+                    path: 'shared/' + filename,
+                    type: isMedia ? 'media' : 'file',
+                    connectionId: '',
+                    content: content,
+                    isNew: true
+                };
+                
+                state.openTabs.push(tab);
+                await cache.delete(req);
+            }
+        }
+        renderTabs();
+        if (state.openTabs.length > 0) {
+            activateTab(state.openTabs[state.openTabs.length - 1].id);
+        }
+        
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (sharedText || sharedUrl) {
+        let content = sharedText || '';
+        if (sharedUrl) content += (content ? '\n' : '') + sharedUrl;
+        
+        const tabId = 'local-shared-' + Date.now();
+        const tab = {
+            id: tabId,
+            name: 'Texto Compartilhado.txt',
+            path: 'shared/texto.txt',
+            type: 'file',
+            connectionId: '',
+            content: content,
+            isNew: true
+        };
+        state.openTabs.push(tab);
+        renderTabs();
+        activateTab(tabId);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
 
 // Ace Editor Initialization
 function initEditor() {
@@ -193,15 +267,41 @@ function handleTabChange(tab) {
         setEditorMode(tab.name);
         state.editor.focus();
         state.editor.resize();
+        updateSaveButtonsVisibility(true);
     } else if (tab.type === 'terminal') {
         switchView('view-terminal');
         document.getElementById('terminal-cmd-input').focus();
+        updateSaveButtonsVisibility(false);
     } else if (tab.type === 'ssh') {
         switchView('view-ssh-terminal');
         document.getElementById('ssh-terminal-cmd-input').focus();
+        updateSaveButtonsVisibility(false);
     } else if (tab.type === 'db') {
         switchView('view-db');
+        updateSaveButtonsVisibility(false);
+    } else if (tab.type === 'media') {
+        switchView('view-media');
+        renderMediaView(tab);
+        updateSaveButtonsVisibility(false);
     }
+}
+
+function renderMediaView(tab) {
+    const container = document.getElementById('media-container');
+    const ext = tab.name.split('.').pop().toLowerCase();
+    
+    if (ext === 'pdf') {
+        container.innerHTML = `<iframe src="${tab.content}" style="width:100%; height:100%; border:none; background: #fff;"></iframe>`;
+    } else {
+        container.innerHTML = `<img src="${tab.content}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="${tab.name}">`;
+    }
+}
+
+function updateSaveButtonsVisibility(show) {
+    const saveBtn = document.getElementById('btn-save-file');
+    const saveAsBtn = document.getElementById('btn-save-as');
+    if (saveBtn) saveBtn.style.display = show ? 'flex' : 'none';
+    if (saveAsBtn) saveAsBtn.style.display = show ? 'flex' : 'none';
 }
 
 // Set Editor Syntax Highlight Mode
@@ -232,6 +332,10 @@ function setEditorMode(filename) {
 
 // Tab Manager API
 function openFile(name, path, isFtp = false, ftpConnId = '') {
+    const ext = name.split('.').pop().toLowerCase();
+    const isMedia = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'pdf'].includes(ext);
+    
+    const tabType = isMedia ? 'media' : (isFtp ? 'ftp' : 'file');
     const tabId = isFtp ? `ftp-${ftpConnId}-${path}` : `local-${path}`;
     
     // Check if tab is already open
@@ -243,8 +347,24 @@ function openFile(name, path, isFtp = false, ftpConnId = '') {
     }
     
     if (window[`loading_tab_${tabId}`]) return;
-    window[`loading_tab_${tabId}`] = true;
+    
+    if (isMedia && !isFtp) {
+        const tab = {
+            id: tabId,
+            name: name,
+            path: path,
+            type: tabType,
+            connectionId: ftpConnId,
+            content: `api/files.php?action=file_serve&path=${encodeURIComponent(path)}`
+        };
+        state.openTabs.push(tab);
+        renderTabs();
+        activateTab(tabId);
+        toggleSidebar(false);
+        return;
+    }
 
+    window[`loading_tab_${tabId}`] = true;
     showToast(`Carregando ${name}...`);
 
     let url = 'api/files.php?action=file_read';
@@ -273,7 +393,7 @@ function openFile(name, path, isFtp = false, ftpConnId = '') {
                 id: tabId,
                 name: name,
                 path: path,
-                type: isFtp ? 'ftp' : 'file',
+                type: tabType,
                 connectionId: ftpConnId,
                 content: data.content
             };
@@ -410,6 +530,7 @@ function activateTab(tabId) {
         document.getElementById('editor').classList.add('hidden');
         state.editor.setValue('', -1);
         state.editor.setReadOnly(true);
+        updateSaveButtonsVisibility(false);
     }
 }
 
@@ -1485,11 +1606,30 @@ window.executeSaveAs = async function() {
     }
     
     const fullPath = (currentSaveAsPath ? currentSaveAsPath + '/' : '') + filename;
-    const content = state.editor.getValue();
     
     const formData = new FormData();
     formData.append('path', fullPath);
-    formData.append('content', content);
+    
+    let isMediaBlob = false;
+    let contentForTab = '';
+    const activeTab = state.openTabs.find(t => t.id === state.activeTabId);
+    
+    if (activeTab && activeTab.type === 'media' && activeTab.content.startsWith('blob:')) {
+        try {
+            const res = await fetch(activeTab.content);
+            const blob = await res.blob();
+            formData.append('content', blob, filename);
+            isMediaBlob = true;
+            contentForTab = activeTab.content;
+        } catch(e) {
+            showToast("Erro ao processar mídia: " + e.message, "error");
+            return;
+        }
+    } else {
+        const content = state.editor.getValue();
+        formData.append('content', content);
+        contentForTab = content;
+    }
     
     try {
         const response = await fetch('api/files.php?action=file_save', { method: 'POST', body: formData });
@@ -1500,15 +1640,16 @@ window.executeSaveAs = async function() {
             closeModal('modal-save-as');
             
             const oldId = state.activeTabId;
-            const tab = state.openTabs.find(t => t.id === oldId);
-            if (tab) {
-                tab.path = fullPath;
-                tab.name = filename;
-                tab.isNew = false;
-                tab.id = `local-${fullPath}`;
-                tab.content = content;
+            const tabObj = state.openTabs.find(t => t.id === oldId);
+            if (tabObj) {
+                tabObj.path = fullPath;
+                tabObj.name = filename;
+                tabObj.isNew = false;
+                tabObj.id = `local-${fullPath}`;
+                tabObj.content = contentForTab;
+                tabObj.type = isMediaBlob ? 'media' : 'file';
                 
-                state.activeTabId = tab.id;
+                state.activeTabId = tabObj.id;
             }
             renderTabs();
             loadLocalFiles();
@@ -1520,11 +1661,22 @@ window.executeSaveAs = async function() {
     }
 };
 
-window.executeSaveAsDownload = function() {
+window.executeSaveAsDownload = async function() {
     const filename = document.getElementById('save-as-filename').value.trim() || 'novo_arquivo.txt';
-    const content = state.editor.getValue();
+    let blob;
+    const tab = state.openTabs.find(t => t.id === state.activeTabId);
+    if (tab && tab.type === 'media' && tab.content.startsWith('blob:')) {
+        try {
+            const res = await fetch(tab.content);
+            blob = await res.blob();
+        } catch(e) {
+            showToast("Erro ao processar mídia: " + e.message, "error");
+            return;
+        }
+    } else {
+        blob = new Blob([state.editor.getValue()], { type: 'text/plain' });
+    }
     
-    const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     
     const a = document.createElement('a');
@@ -1536,6 +1688,45 @@ window.executeSaveAsDownload = function() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     closeModal('modal-save-as');
+};
+
+window.executeShareFile = async function() {
+    const filename = document.getElementById('save-as-filename').value.trim() || 'novo_arquivo.txt';
+    
+    let blob;
+    const tab = state.openTabs.find(t => t.id === state.activeTabId);
+    if (tab && tab.type === 'media' && tab.content.startsWith('blob:')) {
+        try {
+            const res = await fetch(tab.content);
+            blob = await res.blob();
+        } catch(e) {
+            showToast("Erro ao processar mídia: " + e.message, "error");
+            return;
+        }
+    } else {
+        blob = new Blob([state.editor.getValue()], { type: 'text/plain' });
+    }
+    
+    const file = new File([blob], filename, { type: blob.type || 'text/plain' });
+    
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+                title: 'Exportar Arquivo',
+                text: 'Enviado do KodeWeb Lite',
+                files: [file]
+            });
+            showToast("Arquivo compartilhado com sucesso!", "success");
+            closeModal('modal-save-as');
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                showToast("Erro ao compartilhar: " + err.message, "error");
+            }
+        }
+    } else {
+        showToast("Compartilhamento nativo de arquivos não suportado neste navegador.", "error");
+        executeSaveAsDownload();
+    }
 };
 
 function getBasename(path) {

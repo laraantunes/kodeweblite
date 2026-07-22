@@ -100,7 +100,6 @@ try {
 
         case 'file_save':
             $relativePath = $_POST['path'] ?? '';
-            $content = $_POST['content'] ?? '';
             $absPath = get_absolute_path($relativePath);
             
             // Ensure parent directory exists
@@ -109,8 +108,15 @@ try {
                 mkdir($parentDir, 0755, true);
             }
             
-            if (file_put_contents($absPath, $content) === false) {
-                throw new Exception("Falha ao salvar o arquivo.");
+            if (isset($_FILES['content']) && $_FILES['content']['error'] === UPLOAD_ERR_OK) {
+                if (!move_uploaded_file($_FILES['content']['tmp_name'], $absPath)) {
+                    throw new Exception("Falha ao mover arquivo enviado.");
+                }
+            } else {
+                $content = $_POST['content'] ?? '';
+                if (file_put_contents($absPath, $content) === false) {
+                    throw new Exception("Falha ao salvar o arquivo.");
+                }
             }
             
             echo json_encode(['success' => true]);
