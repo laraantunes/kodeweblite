@@ -21,6 +21,7 @@ Irmão mais novo do [KodeWeb IDE](https://github.com/laraantunes/kodeweb), o Kod
 2. Extraia os arquivos em um diretório do seu servidor web (ex: Apache, Nginx) que tenha suporte a PHP (recomendado PHP 8.0+).
 3. Acesse o diretório através do seu navegador (ex: `http://localhost/kodeweb-lite`).
 4. Na primeira execução, você será guiado a criar um usuário mestre e definir o caminho do seu workspace inicial.
+5. Para atualizações posteriores, é só abrir o menu `Opções` -> `Sobre` na interface e clicar em **Buscar Atualizações**.
 
 ## 🔒 Segurança
 
@@ -30,9 +31,10 @@ Por se tratar de uma ferramenta poderosa que concede acesso a arquivos do sistem
 
 - **Backend**: PHP (sem frameworks externos para manter a leveza)
 - **Frontend**: HTML5, Vanilla CSS e Vanilla JavaScript
-- **Editor**: [Monaco Editor](https://microsoft.github.io/monaco-editor/)
+- **Editor**: [ACE Editor](https://ace.c9.io/)
 - **Banco de Dados**: PDO (PHP Data Objects) para MySQL e SQLite
 - **Ícones**: Estilo minimalista com SVG/Emojis
+- **Composer**: Com bibliotecas já pré carregadas na release, é só baixar e rodar! :)
 
 ## 🤝 Contribuição
 
