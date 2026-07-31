@@ -17,11 +17,23 @@ Irmão mais novo do [KodeWeb IDE](https://github.com/laraantunes/kodeweb), o Kod
 
 ## 🛠️ Instalação
 
+### Instalação Padrão
 1. Faça o download da última *release* na [página de lançamentos](https://github.com/laraantunes/kodeweblite/releases).
 2. Extraia os arquivos em um diretório do seu servidor web (ex: Apache, Nginx) que tenha suporte a PHP (recomendado PHP 8.0+).
 3. Acesse o diretório através do seu navegador (ex: `http://localhost/kodeweb-lite`).
 4. Na primeira execução, você será guiado a criar um usuário mestre e definir o caminho do seu workspace inicial.
 5. Para atualizações posteriores, é só abrir o menu `Opções` -> `Sobre` na interface e clicar em **Buscar Atualizações**.
+
+### Rodando com Docker (Recomendado)
+O KodeWeb Lite já vem configurado para rodar nativamente com o Docker. Após baixar os arquivos:
+1. Abra o terminal na raiz do projeto.
+2. Execute o comando:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Acesse o KodeWeb Lite no seu navegador pelo endereço: `http://localhost:8081`. O container cuidará de preparar o PHP, extensões, Composer e permissões automaticamente!
+
+**Acessando arquivos locais:** O arquivo `docker-compose.yml` está pré-configurado para montar a unidade `D:\` do seu computador na pasta `/workspace` do container. Basta navegar até `/workspace` dentro do KodeWeb Lite para editar seus projetos!
 
 ## 🔒 Segurança
 
