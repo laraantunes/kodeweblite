@@ -33,7 +33,7 @@ O KodeWeb Lite já vem configurado para rodar nativamente com o Docker. Após ba
    ```
 3. Acesse o KodeWeb Lite no seu navegador pelo endereço: `http://localhost:8081`. O container cuidará de preparar o PHP, extensões, Composer e permissões automaticamente!
 
-**Acessando arquivos locais:** O arquivo `docker-compose.yml` está pré-configurado para montar a unidade `D:\` do seu computador na pasta `/workspace` do container. Basta navegar até `/workspace` dentro do KodeWeb Lite para editar seus projetos!
+**Acessando arquivos locais:** O arquivo `docker-compose.yml` utiliza a variável `KODEWEB_DOCKER_WORKSPACE_ROOT` no arquivo `.env` para montar uma unidade do seu computador na pasta `/workspace` do container. Basta definir essa variável no `.env` (ex: `KODEWEB_DOCKER_WORKSPACE_ROOT="D:\"`) e navegar até `/workspace` dentro do KodeWeb Lite para editar seus projetos!
 
 ## 🔒 Segurança
 

@@ -10,6 +10,6 @@ services:
     volumes:
       - ./data:/var/www/html/data
       - ./connections:/var/www/html/connections
-      # Mapear a raiz D:\ do seu computador para o KodeWeb Lite acessar como Workspace:
-      - D:\:/workspace
+      # Defina KODEWEB_DOCKER_WORKSPACE_ROOT no seu arquivo .env (ex: KODEWEB_DOCKER_WORKSPACE_ROOT=C:\)
+      - ${KODEWEB_DOCKER_WORKSPACE_ROOT:-./workspace}:/workspace
     restart: unless-stopped
