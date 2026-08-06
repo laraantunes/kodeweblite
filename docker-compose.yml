@@ -8,6 +8,8 @@ services:
       # Usando a porta 8081 para não conflitar com a 8080 do KodeWeb
       - "8081:80"
     volumes:
+      # Montar a pasta atual no container para persistir auto-atualizações do código
+      - ./:/var/www/html
       - ./data:/var/www/html/data
       - ./connections:/var/www/html/connections
       # Defina KODEWEB_DOCKER_WORKSPACE_ROOT no seu arquivo .env (ex: KODEWEB_DOCKER_WORKSPACE_ROOT=C:\)
